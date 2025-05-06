@@ -1,0 +1,55 @@
+# Arquivos de byte-code Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de distribuição / empacotamento
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+.env
+
+# Arquivos e pastas específicos do projeto
+logs/
+backup_dados/
+*.csv
+*.xlsx
+*.xls
+
+# Arquivos temporários SAP
+HOR*.csv
+
+# Arquivos do PyInstaller
+*.spec
+
+# Configurações de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos temporários do Windows
+Thumbs.db
+desktop.ini
+
+# Arquivos temporários do macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Arquivos de configuração local
+.streamlit/secrets.toml
+
+# Arquivos de dados específicos
+*.bak
+*.dat
+*.dir
+
+# Arquivos de log
+*.log
