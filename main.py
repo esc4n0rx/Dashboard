@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="Dashboard Logística", 
     page_icon="📦",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"  # Alterado para mostrar a sidebar aberta por padrão
 )
 
 # Adiciona o diretório atual ao path do Python para resolver importações
@@ -29,7 +29,6 @@ try:
     
     # Verifica a existência do arquivo de dados e registra informações
     if os.path.exists(SAP_EXPORT_PATH):
-        #log_info(f"Arquivo de dados encontrado: {SAP_EXPORT_PATH}")
         print(f"Arquivo encontrado, tamanho: {os.path.getsize(SAP_EXPORT_PATH) / 1024:.2f} KB")
     else:
         log_info(f"Arquivo de dados não encontrado: {SAP_EXPORT_PATH}")
@@ -39,9 +38,7 @@ try:
     
     # Executa a aplicação
     if __name__ == "__main__":
-        #log_info("Iniciando Dashboard de Logística...")
         main_app()
-        #log_info("Dashboard encerrado.")
 
 except ImportError as e:
     st.error(f"Erro ao importar módulos: {str(e)}")
@@ -63,6 +60,7 @@ except ImportError as e:
     - logistica_sap.py
     - logistica_processador.py
     - logistica_graficos.py
+    - logistica_calculos.py    # Novo módulo adicionado
     """)
 
 except Exception as e:
