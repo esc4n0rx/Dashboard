@@ -295,6 +295,8 @@ def criar_grafico_ranking(ranking, top_n=10):
     
     return fig
 
+# Substitua a função criar_cartao_previsao no arquivo logistica_calculos.py por esta versão:
+
 def criar_cartao_previsao(previsao, deposito):
     """
     Cria um cartão HTML com a previsão de conclusão.
@@ -342,35 +344,37 @@ def criar_cartao_previsao(previsao, deposito):
     else:
         classe = "metric-card"
     
+    # Versão simplificada do HTML para garantir compatibilidade
     return f"""
     <div class="{classe}">
         <h3>Previsão de Conclusão - Depósito {deposito}</h3>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <div>
-                <h4>Status Atual</h4>
-                <p><b>{finalizadas}</b> de <b>{total}</b> itens finalizados</p>
-                <p><b>{percentual}%</b> concluído</p>
-            </div>
-            <div>
-                <h4>Taxa de Progresso</h4>
-                <p><b>{round(previsao['taxa_progresso'], 2)}</b> itens/min</p>
-                <p><b>{round(previsao['delta_finalizadas'])}</b> itens em <b>{round(previsao['delta_tempo_min'])}</b> min</p>
-            </div>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-            <div>
-                <h4>Tempo Restante</h4>
-                <p><b>{tempo_restante_formatado}</b></p>
-                <p><b>{previsao['itens_restantes']}</b> itens restantes</p>
-            </div>
-            <div>
-                <h4>Previsão de Conclusão</h4>
-                <p style="font-size: 1.2em; font-weight: bold; color: #FFB74D;">
-                    {previsao['horario_conclusao_formatado']}
-                </p>
-            </div>
-        </div>
+        <table width="100%">
+            <tr>
+                <td width="50%">
+                    <h4>Status Atual</h4>
+                    <p><b>{finalizadas}</b> de <b>{total}</b> itens finalizados</p>
+                    <p><b>{percentual}%</b> concluído</p>
+                </td>
+                <td width="50%">
+                    <h4>Taxa de Progresso</h4>
+                    <p><b>{round(previsao['taxa_progresso'], 2)}</b> itens/min</p>
+                    <p><b>{round(previsao['delta_finalizadas'])}</b> itens em <b>{round(previsao['delta_tempo_min'])}</b> min</p>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%">
+                    <h4>Tempo Restante</h4>
+                    <p><b>{tempo_restante_formatado}</b></p>
+                    <p><b>{previsao['itens_restantes']}</b> itens restantes</p>
+                </td>
+                <td width="50%">
+                    <h4>Previsão de Conclusão</h4>
+                    <p style="font-size: 1.2em; font-weight: bold; color: #FFB74D;">
+                        {previsao['horario_conclusao_formatado']}
+                    </p>
+                </td>
+            </tr>
+        </table>
     </div>
     """
 
