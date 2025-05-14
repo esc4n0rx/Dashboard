@@ -260,8 +260,10 @@ def criar_grafico_ranking(ranking, top_n=10):
             'font': {'color': "#BB8674", 'size': 20}
         },
         yaxis=dict(
-            title="Usuário",
-            titlefont=dict(color="#F5F5F5"),
+            title=dict(
+            text="Usuário",
+            font=dict(color="#F5F5F5")  
+        ),
             tickmode='array',
             tickvals=ranking_plot["NOME_USUARIO"],
             ticktext=nomes_com_posicao,
@@ -269,8 +271,10 @@ def criar_grafico_ranking(ranking, top_n=10):
             gridcolor="#333333",
         ),
         xaxis=dict(
-            title="Total de Linhas Finalizadas",
-            titlefont=dict(color="#F5F5F5"),
+            title=dict(  
+            text="Total de Linhas Finalizadas",
+            font=dict(color="#F5F5F5")  
+        ),
             tickfont=dict(color="#F5F5F5"),
             gridcolor="#333333",
         ),

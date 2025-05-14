@@ -20,6 +20,8 @@ from logistica_calculos import (
     registrar_progresso,
     exibir_pagina_calculos
 )
+# Importar o novo módulo de cortes
+from logistica_cortes import exibir_pagina_cortes
 
 def main_app():
     """Função principal que cria a interface do Streamlit com sidebar e abas."""
@@ -45,11 +47,11 @@ def main_app():
             else:
                 log_erro("Falha ao extrair dados do SAP.")
     
-    # Navegação de abas na sidebar
+    # Navegação de abas na sidebar - Adicionando a nova aba "Cortes"
     st.sidebar.subheader("Navegação")
     aba = st.sidebar.radio(
         "Selecione uma aba:",
-        ["📊 Dashboard", "🧮 Cálculos", "📋 Dados Brutos", "📝 Logs"]
+        ["📊 Dashboard", "🧮 Cálculos", "✂️ Cortes", "📋 Dados Brutos", "📝 Logs"]
     )
     
     # Informações adicionais na sidebar
@@ -97,6 +99,8 @@ def main_app():
         exibir_dashboard(dados)
     elif aba == "🧮 Cálculos":
         exibir_pagina_calculos(df, deposito)
+    elif aba == "✂️ Cortes":  # Nova aba de cortes
+        exibir_pagina_cortes(df, deposito)
     elif aba == "📋 Dados Brutos":
         exibir_dados_brutos(dados)
     elif aba == "📝 Logs":

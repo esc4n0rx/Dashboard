@@ -1,0 +1,6 @@
+streamlit
+pandas
+plotly
+numpy
+pywin32
+python-dateutil
