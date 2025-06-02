@@ -394,14 +394,23 @@ def exibir_pagina_calculos(df, deposito):
         None
     """
     import streamlit as st
+    from logistica_processador import aplicar_filtro_datas_outras_telas
     
     st.title("Cálculos Avançados")
+    
+    # Aplicar filtro de data específico para outras telas
+    df_filtrado = aplicar_filtro_datas_outras_telas(df)
+    
+    if df_filtrado.empty:
+        st.warning("⚠️ Nenhum dado encontrado para a data atual (DT_PLANEJADA = hoje)")
+        st.info("A página de Cálculos usa apenas dados com DT_PLANEJADA igual à data atual do sistema.")
+        return
     
     # Seção 1: Ranking da Operação
     st.subheader("🏆 Ranking da Operação")
     
     # Calcular o ranking
-    ranking = calcular_ranking_usuarios(df, deposito)
+    ranking = calcular_ranking_usuarios(df_filtrado, deposito)
     
     # Exibir o gráfico
     st.plotly_chart(criar_grafico_ranking(ranking), use_container_width=True)
@@ -433,6 +442,8 @@ def exibir_pagina_calculos(df, deposito):
     conclusão. Com base nessa taxa, estima o tempo necessário para finalizar os itens restantes.
     
     Para melhorar a precisão da previsão, atualize o dashboard periodicamente.
+    
+    **Nota:** Esta tela usa apenas dados com DT_PLANEJADA igual à data atual.
     """)
     
     # Mostrar histórico de atualizações (expander)

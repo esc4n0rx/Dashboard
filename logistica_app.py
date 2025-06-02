@@ -7,7 +7,7 @@ import os
 import time
 
 # Importações dos módulos do dashboard
-from logistica_config import DEPOSITOS, CSS, SAP_EXPORT_PATH
+from logistica_config import DEPOSITOS, CSS, SAP_EXPORT_PATH, USAR_NOVA_LOGICA_DATAS
 from logistica_logger import log_info, log_erro, log_aviso, log_sucesso, log_debug
 from logistica_sap import extrair_dados_sap
 from logistica_processador import carregar_dados, processar_dados
@@ -37,6 +37,22 @@ def main_app():
     )
     deposito = DEPOSITOS[setor]
     
+    # Informação sobre o modo de filtragem de datas
+    with st.sidebar.expander("🗓️ Configuração de Datas"):
+        if USAR_NOVA_LOGICA_DATAS:
+            st.success("**Nova Lógica Ativada**")
+            st.info("""
+            **Dashboard:**
+            - DT_PLANEJADA: ontem ou hoje
+            - DT_PRODUCAO: apenas hoje
+            
+            **Outras telas:**
+            - DT_PLANEJADA: apenas hoje
+            """)
+        else:
+            st.warning("**Lógica Antiga Ativada**")
+            st.info("Sem filtro específico de datas")
+    
     # Botão de atualização na sidebar
     if st.sidebar.button("🔄 Atualizar Dados", use_container_width=True):
         with st.spinner("Extraindo dados do SAP..."):
@@ -47,7 +63,7 @@ def main_app():
             else:
                 log_erro("Falha ao extrair dados do SAP.")
     
-    # Navegação de abas na sidebar - Adicionando a nova aba "Cortes"
+    # Navegação de abas na sidebar
     st.sidebar.subheader("Navegação")
     aba = st.sidebar.radio(
         "Selecione uma aba:",
@@ -84,26 +100,58 @@ def main_app():
     log_debug(f"Colunas disponíveis: {df.columns.tolist()}")
     log_debug(f"Valores únicos de DEPOSITO: {df['DEPOSITO'].unique().tolist() if 'DEPOSITO' in df.columns else 'Coluna não encontrada'}")
     
-    # Processar dados
-    dados = processar_dados(df, deposito)
-    
-    if not dados:
-        log_aviso(f"Nenhum dado encontrado para o depósito {deposito}.")
-        st.stop()
-    
-    # Registrar progresso para cálculos de previsão
-    registrar_progresso(dados, deposito)
-    
     # Renderizar a aba selecionada
     if aba == "📊 Dashboard":
+        # Processar dados especificamente para dashboard
+        dados = processar_dados(df, deposito, tipo_tela="dashboard")
+        
+        if not dados:
+            log_aviso(f"Nenhum dado encontrado para o depósito {deposito} (Dashboard).")
+            st.stop()
+        
+        # Registrar progresso para cálculos de previsão
+        registrar_progresso(dados, deposito)
+        
         exibir_dashboard(dados)
+        
     elif aba == "🧮 Cálculos":
+        # Processar dados para cálculos (sempre usa DT_PLANEJADA = hoje)
+        dados = processar_dados(df, deposito, tipo_tela="calculos")
+        
+        if not dados:
+            log_aviso(f"Nenhum dado encontrado para o depósito {deposito} (Cálculos).")
+            st.stop()
+        
         exibir_pagina_calculos(df, deposito)
-    elif aba == "✂️ Cortes":  # Nova aba de cortes
+        
+    elif aba == "✂️ Cortes":
+        # Processar dados para cortes (sempre usa DT_PLANEJADA = hoje)
+        dados = processar_dados(df, deposito, tipo_tela="cortes")
+        
+        if not dados:
+            log_aviso(f"Nenhum dado encontrado para o depósito {deposito} (Cortes).")
+            st.stop()
+        
         exibir_pagina_cortes(df, deposito)
+        
     elif aba == "📋 Dados Brutos":
+        # Para dados brutos, mostrar os dados originais sem filtro de data
+        dados = processar_dados(df, deposito, tipo_tela="dados_brutos")
+        
+        if not dados:
+            log_aviso(f"Nenhum dado encontrado para o depósito {deposito} (Dados Brutos).")
+            st.stop()
+        
         exibir_dados_brutos(dados)
+        
     elif aba == "📝 Logs":
+        # Para logs, usar dados do dashboard para consistência
+        dados = processar_dados(df, deposito, tipo_tela="dashboard")
+        
+        if not dados:
+            log_aviso(f"Nenhum dado encontrado para o depósito {deposito} (Logs).")
+            st.stop()
+        
         exibir_logs(df, dados)
 
 def exibir_dashboard(dados):
@@ -168,6 +216,14 @@ def exibir_dashboard(dados):
 def exibir_dados_brutos(dados):
     """Exibe a aba de dados brutos."""
     st.title("Dados Brutos")
+    
+    # Informar sobre o filtro aplicado
+    from logistica_config import USAR_NOVA_LOGICA_DATAS
+    if USAR_NOVA_LOGICA_DATAS:
+        st.info("📋 Dados filtrados conforme configuração de datas (DT_PLANEJADA = hoje)")
+    else:
+        st.info("📋 Dados sem filtro de data específico")
+    
     st.dataframe(
         dados["df"],
         use_container_width=True,
@@ -184,6 +240,7 @@ def exibir_logs(df, dados):
     Tamanho do arquivo: {os.path.getsize(SAP_EXPORT_PATH) / 1024:.2f} KB se existir
     Registros carregados: {len(df)}
     Registros após filtro: {len(dados['df'])}
+    Nova lógica de datas: {"Ativada" if USAR_NOVA_LOGICA_DATAS else "Desativada"}
     """)
     
     st.markdown("### 🔍 Detalhes do DataFrame")
@@ -191,6 +248,15 @@ def exibir_logs(df, dados):
     Colunas disponíveis: {df.columns.tolist()}
     Valores únicos DEPOSITO: {df['DEPOSITO'].unique().tolist() if 'DEPOSITO' in df.columns else 'Coluna não encontrada'}
     """)
+    
+    # Verificar se as colunas de data existem
+    if 'DT_PLANEJADA' in df.columns:
+        dt_planejada_unique = df['DT_PLANEJADA'].unique()[:10]  # Primeiros 10 valores únicos
+        st.code(f"Valores de DT_PLANEJADA (amostra): {dt_planejada_unique.tolist()}")
+    
+    if 'DT_PRODUCAO' in df.columns:
+        dt_producao_unique = df['DT_PRODUCAO'].unique()[:10]  # Primeiros 10 valores únicos
+        st.code(f"Valores de DT_PRODUCAO (amostra): {dt_producao_unique.tolist()}")
     
     st.markdown("### 📋 Amostra de Dados")
     if not df.empty:

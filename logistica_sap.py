@@ -47,9 +47,9 @@ def extrair_dados_sap():
         log_debug("Preenchido usuário para extração...")
         
         session.findById("wnd[1]/tbar[0]/btn[8]").press()
-        session.findById("wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell").currentCellRow = 1
-        session.findById("wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell").selectedRows = "1"
+        session.findById("wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell").selectedRows = "0"
         session.findById("wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell").doubleClickCurrentCell
+        session.findById("wnd[0]").sendVKey(0)
         
         # Inserção das datas dinâmicas
         session.findById("wnd[0]/usr/ctxtSO_PDATU-LOW").text = data_baixa

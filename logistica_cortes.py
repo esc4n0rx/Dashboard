@@ -314,6 +314,7 @@ def criar_grafico_cortes_material(cortes_por_material: pd.DataFrame, top_n: int 
         return _criar_grafico_erro("Erro no Gráfico de Cortes por Material", str(e), altura=500)
 
 
+
 def exibir_pagina_cortes(df_principal: pd.DataFrame, deposito_selecionado: Optional[str]):
     """
     Exibe a página de análise de cortes no Streamlit.
@@ -322,13 +323,24 @@ def exibir_pagina_cortes(df_principal: pd.DataFrame, deposito_selecionado: Optio
         df_principal (pd.DataFrame): DataFrame com todos os dados carregados.
         deposito_selecionado (str, optional): Código do depósito selecionado.
     """
+    import streamlit as st
+    from logistica_processador import aplicar_filtro_datas_outras_telas
+    
     st.title("Análise de Cortes")
 
     try:
-        dados_cortes = processar_dados_cortes(df_principal, deposito_selecionado)
+        # Aplicar filtro de data específico para outras telas
+        df_filtrado_data = aplicar_filtro_datas_outras_telas(df_principal)
+        
+        if df_filtrado_data.empty:
+            st.warning("⚠️ Nenhum dado encontrado para a data atual (DT_PLANEJADA = hoje)")
+            st.info("A página de Cortes usa apenas dados com DT_PLANEJADA igual à data atual do sistema.")
+            return
+        
+        dados_cortes = processar_dados_cortes(df_filtrado_data, deposito_selecionado)
 
         if dados_cortes["total_cortes"] == 0:
-            st.info(f"Nenhum item cortado encontrado{' para o depósito selecionado' if deposito_selecionado else ''}.")
+            st.info(f"Nenhum item cortado encontrado{' para o depósito selecionado' if deposito_selecionado else ''} na data atual.")
             return
 
         # Seção 1: Métricas Gerais
@@ -403,7 +415,6 @@ def exibir_pagina_cortes(df_principal: pd.DataFrame, deposito_selecionado: Optio
                             df_exibicao["QUANT_NT_NUM"] = df_cortados_detalhe["QUANT_NT_NUM"]
                          mapa_nomes_colunas["QUANT_NT_NUM"] = "Qtd. (Numérico)"
 
-
                     df_exibicao.rename(columns=mapa_nomes_colunas, inplace=True)
                     
                     st.dataframe(df_exibicao, use_container_width=True)
@@ -412,6 +423,9 @@ def exibir_pagina_cortes(df_principal: pd.DataFrame, deposito_selecionado: Optio
             except Exception as e:
                 log_erro(f"Erro ao exibir detalhes dos itens cortados: {str(e)}", mostrar_ui=True)
                 st.error("Erro ao exibir detalhes dos itens cortados. Veja os logs para mais detalhes.")
+        
+        # Informação sobre o filtro de data
+        st.info("📅 **Nota:** Esta análise considera apenas dados com DT_PLANEJADA igual à data atual do sistema.")
 
     except Exception as e:
         log_erro(f"Erro geral na página de análise de cortes: {str(e)}", mostrar_ui=True)

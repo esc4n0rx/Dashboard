@@ -6,7 +6,7 @@ import pandas as pd
 import os
 import datetime
 from logistica_logger import log_info, log_erro, log_debug, log_aviso, log_sucesso
-from logistica_config import SAP_EXPORT_PATH, USUARIOS_NORMAL
+from logistica_config import SAP_EXPORT_PATH, USUARIOS_NORMAL, USAR_NOVA_LOGICA_DATAS
 
 # Pasta para backup de dados
 BACKUP_DIR = "backup_dados"
@@ -67,6 +67,130 @@ def carregar_dados():
         log_erro("Erro ao carregar o arquivo CSV", mostrar_ui=False, exception=e)
         return pd.DataFrame()
 
+def aplicar_filtro_datas_dashboard(df):
+    """
+    Aplica o filtro de datas específico para o dashboard baseado na nova lógica.
+    
+    Lógica da nova feature:
+    - DT_PLANEJADA: pode ser hoje ou ontem
+    - DT_PRODUCAO: deve ser hoje (data atual)
+    
+    Args:
+        df (DataFrame): DataFrame com os dados carregados.
+        
+    Returns:
+        DataFrame: DataFrame filtrado ou original se nova lógica estiver desabilitada.
+    """
+    if not USAR_NOVA_LOGICA_DATAS:
+        log_debug("Nova lógica de datas desabilitada. Retornando dados sem filtro de data.")
+        return df
+    
+    log_debug("Aplicando nova lógica de filtragem de datas para dashboard...")
+    
+    # Verificar se as colunas necessárias existem
+    if "DT_PLANEJADA" not in df.columns or "DT_PRODUCAO" not in df.columns:
+        log_aviso("Colunas DT_PLANEJADA ou DT_PRODUCAO não encontradas. Retornando dados sem filtro.")
+        return df
+    
+    # Obter data atual e ontem
+    hoje = datetime.date.today()
+    ontem = hoje - datetime.timedelta(days=1)
+    
+    # Formatar datas para comparação (considerar possíveis formatos)
+    hoje_str = hoje.strftime("%d.%m.%Y")
+    ontem_str = ontem.strftime("%d.%m.%Y")
+    hoje_str_alt = hoje.strftime("%d/%m/%Y")
+    ontem_str_alt = ontem.strftime("%d/%m/%Y")
+    hoje_str_iso = hoje.strftime("%Y-%m-%d")
+    ontem_str_iso = ontem.strftime("%Y-%m-%d")
+    
+    log_debug(f"Filtrando dados para:")
+    log_debug(f"  - DT_PLANEJADA: {ontem_str} ou {hoje_str} (e variações)")
+    log_debug(f"  - DT_PRODUCAO: {hoje_str} (e variações)")
+    
+    try:
+        # Criar cópia para não modificar o original
+        df_filtrado = df.copy()
+        
+        # Garantir que as colunas são strings e remover espaços
+        df_filtrado["DT_PLANEJADA"] = df_filtrado["DT_PLANEJADA"].astype(str).str.strip()
+        df_filtrado["DT_PRODUCAO"] = df_filtrado["DT_PRODUCAO"].astype(str).str.strip()
+        
+        # Condição para DT_PLANEJADA (ontem OU hoje)
+        condicao_planejada = (
+            df_filtrado["DT_PLANEJADA"].isin([ontem_str, ontem_str_alt, ontem_str_iso]) |
+            df_filtrado["DT_PLANEJADA"].isin([hoje_str, hoje_str_alt, hoje_str_iso])
+        )
+        
+        # Condição para DT_PRODUCAO (apenas hoje)
+        condicao_producao = df_filtrado["DT_PRODUCAO"].isin([hoje_str, hoje_str_alt, hoje_str_iso])
+        
+        # Aplicar filtros combinados
+        df_resultado = df_filtrado[condicao_planejada & condicao_producao].copy()
+        
+        log_info(f"Filtro de datas aplicado: {len(df)} -> {len(df_resultado)} registros", mostrar_ui=False)
+        log_debug(f"Registros filtrados por DT_PLANEJADA: {condicao_planejada.sum()}")
+        log_debug(f"Registros filtrados por DT_PRODUCAO: {condicao_producao.sum()}")
+        log_debug(f"Registros após filtro combinado: {len(df_resultado)}")
+        
+        return df_resultado
+        
+    except Exception as e:
+        log_erro("Erro ao aplicar filtro de datas", mostrar_ui=False, exception=e)
+        log_aviso("Retornando dados sem filtro devido ao erro", mostrar_ui=False)
+        return df
+
+def aplicar_filtro_datas_outras_telas(df):
+    """
+    Aplica filtro de data para outras telas (Cálculos, Cortes, etc.).
+    
+    Lógica: DT_PLANEJADA = data atual (hoje)
+    
+    Args:
+        df (DataFrame): DataFrame com os dados carregados.
+        
+    Returns:
+        DataFrame: DataFrame filtrado por data atual.
+    """
+    log_debug("Aplicando filtro de data atual para outras telas...")
+    
+    # Verificar se a coluna necessária existe
+    if "DT_PLANEJADA" not in df.columns:
+        log_aviso("Coluna DT_PLANEJADA não encontrada. Retornando dados sem filtro.")
+        return df
+    
+    # Obter data atual
+    hoje = datetime.date.today()
+    
+    # Formatar datas para comparação (considerar possíveis formatos)
+    hoje_str = hoje.strftime("%d.%m.%Y")
+    hoje_str_alt = hoje.strftime("%d/%m/%Y")
+    hoje_str_iso = hoje.strftime("%Y-%m-%d")
+    
+    log_debug(f"Filtrando dados para DT_PLANEJADA = {hoje_str} (e variações)")
+    
+    try:
+        # Criar cópia para não modificar o original
+        df_filtrado = df.copy()
+        
+        # Garantir que a coluna é string e remover espaços
+        df_filtrado["DT_PLANEJADA"] = df_filtrado["DT_PLANEJADA"].astype(str).str.strip()
+        
+        # Condição para DT_PLANEJADA (apenas hoje)
+        condicao_planejada = df_filtrado["DT_PLANEJADA"].isin([hoje_str, hoje_str_alt, hoje_str_iso])
+        
+        # Aplicar filtro
+        df_resultado = df_filtrado[condicao_planejada].copy()
+        
+        log_info(f"Filtro de data atual aplicado: {len(df)} -> {len(df_resultado)} registros", mostrar_ui=False)
+        
+        return df_resultado
+        
+    except Exception as e:
+        log_erro("Erro ao aplicar filtro de data atual", mostrar_ui=False, exception=e)
+        log_aviso("Retornando dados sem filtro devido ao erro", mostrar_ui=False)
+        return df
+
 def classificar_status(grupo):
     """
     Classifica o status de uma NT com base nas regras de negócio.
@@ -91,30 +215,41 @@ def classificar_status(grupo):
     else:
         return "Em Separação"
 
-def processar_dados(df, deposito):
+def processar_dados(df, deposito, tipo_tela="dashboard"):
     """
     Processa os dados conforme requisitos de negócio e gera métricas.
     
     Args:
         df (DataFrame): DataFrame com os dados carregados.
         deposito (str): Código do depósito para filtrar os dados.
+        tipo_tela (str): Tipo de tela ("dashboard", "calculos", "cortes", etc.)
         
     Returns:
         dict: Dicionário com todas as métricas processadas ou None se não houver dados.
     """
-    log_info(f"Processando dados para o depósito {deposito}...", mostrar_ui=False)
+    log_info(f"Processando dados para o depósito {deposito} (tela: {tipo_tela})...", mostrar_ui=False)
     
     if df.empty:
         log_aviso("DataFrame vazio, nenhum dado para processar", mostrar_ui=False)
         return None
     
+    # Aplicar filtro de datas baseado no tipo de tela
+    if tipo_tela == "dashboard":
+        df_com_filtro_data = aplicar_filtro_datas_dashboard(df)
+    else:
+        df_com_filtro_data = aplicar_filtro_datas_outras_telas(df)
+    
+    if df_com_filtro_data.empty:
+        log_aviso(f"Nenhum registro encontrado após aplicar filtro de datas para {tipo_tela}", mostrar_ui=False)
+        return None
+    
     # Verificar se a coluna de depósito existe
-    if "DEPOSITO" not in df.columns:
+    if "DEPOSITO" not in df_com_filtro_data.columns:
         log_aviso("Coluna 'DEPOSITO' não encontrada no DataFrame", mostrar_ui=False)
         return None
     
     # Filtra por depósito
-    df_filtrado = df[df["DEPOSITO"] == deposito].copy()
+    df_filtrado = df_com_filtro_data[df_com_filtro_data["DEPOSITO"] == deposito].copy()
     log_debug(f"Registros após filtro de depósito {deposito}: {len(df_filtrado)}")
     
     if df_filtrado.empty:

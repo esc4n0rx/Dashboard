@@ -5,8 +5,13 @@ Contém constantes e configurações usadas pelo aplicativo.
 import os
 
 # Constantes de sistema
-SAP_EXPORT_PATH = r"\\srv-ameixa\Area de Troca\mod.csv"
+SAP_EXPORT_PATH = r"\\srv-ameixa\Area de Troca\HOR478.csv"
 USUARIOS_NORMAL = ["FERN.PINTO", "ANDR.DACOSTA", "GABY.DACOSTA", "WILL.CARNEIR", "CLAU.OLIVEIR"]
+
+# NOVA FEATURE: Controle da lógica de filtragem de datas
+# Se True: usa nova lógica (DT_PLANEJADA ontem + hoje, mas só DT_PRODUCAO hoje)
+# Se False: usa lógica antiga (sem filtro de data específico)
+USAR_NOVA_LOGICA_DATAS = True
 
 # Cores para o dashboard - Tema escuro
 CORES = {
