@@ -72,8 +72,8 @@ def aplicar_filtro_datas_dashboard(df):
     Aplica o filtro de datas específico para o dashboard baseado na nova lógica.
     
     Lógica da nova feature:
-    - DT_PLANEJADA: pode ser hoje ou ontem
-    - DT_PRODUCAO: deve ser hoje (data atual)
+    - DT_PLANEJADA: ontem OU hoje  
+    - DT_PRODUCAO: hoje OU vazio (pois alguns itens podem não ter produção ainda)
     
     Args:
         df (DataFrame): DataFrame com os dados carregados.
@@ -88,8 +88,8 @@ def aplicar_filtro_datas_dashboard(df):
     log_debug("Aplicando nova lógica de filtragem de datas para dashboard...")
     
     # Verificar se as colunas necessárias existem
-    if "DT_PLANEJADA" not in df.columns or "DT_PRODUCAO" not in df.columns:
-        log_aviso("Colunas DT_PLANEJADA ou DT_PRODUCAO não encontradas. Retornando dados sem filtro.")
+    if "DT_PLANEJADA" not in df.columns:
+        log_aviso("Coluna DT_PLANEJADA não encontrada. Retornando dados sem filtro.")
         return df
     
     # Obter data atual e ontem
@@ -104,9 +104,7 @@ def aplicar_filtro_datas_dashboard(df):
     hoje_str_iso = hoje.strftime("%Y-%m-%d")
     ontem_str_iso = ontem.strftime("%Y-%m-%d")
     
-    log_debug(f"Filtrando dados para:")
-    log_debug(f"  - DT_PLANEJADA: {ontem_str} ou {hoje_str} (e variações)")
-    log_debug(f"  - DT_PRODUCAO: {hoje_str} (e variações)")
+    log_debug(f"Filtrando dados para DT_PLANEJADA: {ontem_str} OU {hoje_str} (e variações)")
     
     try:
         # Criar cópia para não modificar o original
@@ -114,7 +112,6 @@ def aplicar_filtro_datas_dashboard(df):
         
         # Garantir que as colunas são strings e remover espaços
         df_filtrado["DT_PLANEJADA"] = df_filtrado["DT_PLANEJADA"].astype(str).str.strip()
-        df_filtrado["DT_PRODUCAO"] = df_filtrado["DT_PRODUCAO"].astype(str).str.strip()
         
         # Condição para DT_PLANEJADA (ontem OU hoje)
         condicao_planejada = (
@@ -122,16 +119,12 @@ def aplicar_filtro_datas_dashboard(df):
             df_filtrado["DT_PLANEJADA"].isin([hoje_str, hoje_str_alt, hoje_str_iso])
         )
         
-        # Condição para DT_PRODUCAO (apenas hoje)
-        condicao_producao = df_filtrado["DT_PRODUCAO"].isin([hoje_str, hoje_str_alt, hoje_str_iso])
-        
-        # Aplicar filtros combinados
-        df_resultado = df_filtrado[condicao_planejada & condicao_producao].copy()
+        # Para o dashboard, não filtrar por DT_PRODUCAO ainda
+        # pois alguns itens podem estar planejados mas não produzidos
+        df_resultado = df_filtrado[condicao_planejada].copy()
         
         log_info(f"Filtro de datas aplicado: {len(df)} -> {len(df_resultado)} registros", mostrar_ui=False)
-        log_debug(f"Registros filtrados por DT_PLANEJADA: {condicao_planejada.sum()}")
-        log_debug(f"Registros filtrados por DT_PRODUCAO: {condicao_producao.sum()}")
-        log_debug(f"Registros após filtro combinado: {len(df_resultado)}")
+        log_debug(f"Registros com DT_PLANEJADA válida: {condicao_planejada.sum()}")
         
         return df_resultado
         
@@ -249,7 +242,7 @@ def processar_dados(df, deposito, tipo_tela="dashboard"):
         return None
     
     # Filtra por depósito
-    df_filtrado = df_com_filtro_data[df_com_filtro_data["DEPOSITO"] == deposito].copy()
+    df_filtrado = df_com_filtro_data[df_com_filtro_data["DEPOSITO"].isin(["DP01", "DP40"])].copy()
     log_debug(f"Registros após filtro de depósito {deposito}: {len(df_filtrado)}")
     
     if df_filtrado.empty:

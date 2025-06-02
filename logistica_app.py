@@ -28,14 +28,26 @@ def main_app():
     # Configuração da sidebar
     st.sidebar.title("📦 Dashboard Logística")
     
-    # Seleção de setor na sidebar
-    st.sidebar.subheader("Configurações")
-    setor = st.sidebar.selectbox(
-        "Selecione o setor:",
-        list(DEPOSITOS.keys()),
-        help="Selecione o setor para visualizar os dados"
+    # Navegação de abas na sidebar (movido para cima para determinar o comportamento)
+    st.sidebar.subheader("Navegação")
+    aba = st.sidebar.radio(
+        "Selecione uma aba:",
+        ["📊 Dashboard", "🧮 Cálculos", "✂️ Cortes", "📋 Dados Brutos", "📝 Logs"]
     )
-    deposito = DEPOSITOS[setor]
+    
+    # Seleção de setor na sidebar - comportamento dependente da aba
+    st.sidebar.subheader("Configurações")
+    
+    if aba == "📊 Dashboard":
+        st.sidebar.info("🏪 Dashboard exibe **TODOS** os setores (Mercearia + Perecíveis)")
+        deposito = "ambos"  # Sinalizar que é para ambos
+    else:
+        setor = st.sidebar.selectbox(
+            "Selecione o setor:",
+            list(DEPOSITOS.keys()),
+            help="Selecione o setor para visualizar os dados"
+        )
+        deposito = DEPOSITOS[setor]
     
     # Informação sobre o modo de filtragem de datas
     with st.sidebar.expander("🗓️ Configuração de Datas"):
@@ -62,13 +74,6 @@ def main_app():
                 time.sleep(2)
             else:
                 log_erro("Falha ao extrair dados do SAP.")
-    
-    # Navegação de abas na sidebar
-    st.sidebar.subheader("Navegação")
-    aba = st.sidebar.radio(
-        "Selecione uma aba:",
-        ["📊 Dashboard", "🧮 Cálculos", "✂️ Cortes", "📋 Dados Brutos", "📝 Logs"]
-    )
     
     # Informações adicionais na sidebar
     with st.sidebar.expander("ℹ️ Informações"):
