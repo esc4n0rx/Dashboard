@@ -1,12 +1,9 @@
-"""
-Módulo principal do aplicativo Streamlit para o Dashboard de Logística.
-"""
+
 import streamlit as st
 import pandas as pd
 import os
 import time
 
-# Importações dos módulos do dashboard
 from logistica_config import DEPOSITOS, CSS, SAP_EXPORT_PATH, USAR_NOVA_LOGICA_DATAS
 from logistica_logger import log_info, log_erro, log_aviso, log_sucesso, log_debug
 from logistica_sap import extrair_dados_sap
