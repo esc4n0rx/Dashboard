@@ -12,6 +12,86 @@ from logistica_config import SAP_EXPORT_PATH, USUARIOS_NORMAL, USAR_NOVA_LOGICA_
 BACKUP_DIR = "backup_dados"
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
+def limpar_dados_finalizados_zerados(df):
+    """
+    Remove linhas onde ITEM_FINALIZADO = "X" e QUANT_NT = 0.
+    
+    Args:
+        df (DataFrame): DataFrame com os dados carregados.
+        
+    Returns:
+        DataFrame: DataFrame sem as linhas filtradas.
+    """
+    log_debug("Iniciando limpeza de dados finalizados com quantidade zero...")
+    
+    if df.empty:
+        log_debug("DataFrame vazio, nenhuma limpeza necessária")
+        return df
+    
+    registros_iniciais = len(df)
+    
+    # Verificar se as colunas necessárias existem
+    if "ITEM_FINALIZADO" not in df.columns:
+        log_aviso("Coluna 'ITEM_FINALIZADO' não encontrada. Pulando limpeza.")
+        return df
+    
+    if "QUANT_NT" not in df.columns:
+        log_aviso("Coluna 'QUANT_NT' não encontrada. Pulando limpeza.")
+        return df
+    
+    # Criar cópia para não modificar o original
+    df_limpo = df.copy()
+    
+    # Garantir que as colunas são strings para comparação
+    df_limpo["ITEM_FINALIZADO"] = df_limpo["ITEM_FINALIZADO"].astype(str).fillna("")
+    df_limpo["QUANT_NT"] = df_limpo["QUANT_NT"].astype(str).fillna("0")
+    
+    # Identificar linhas a serem removidas
+    # ITEM_FINALIZADO = "X" E QUANT_NT = "0" (considerando variações como "0,00", "0.00", etc.)
+    condicao_finalizado = df_limpo["ITEM_FINALIZADO"].str.upper() == "X"
+    
+    # Para QUANT_NT, considerar valores que são efetivamente zero
+    # Limpar a string para remover separadores e converter
+    quant_nt_limpo = (
+        df_limpo["QUANT_NT"]
+        .str.strip()
+        .str.replace('.', '', regex=False)  # Remove separador de milhar
+        .str.replace(',', '.', regex=False)  # Substitui vírgula decimal por ponto
+    )
+    
+    # Converter para numérico e verificar se é zero
+    try:
+        quant_nt_numerico = pd.to_numeric(quant_nt_limpo, errors='coerce').fillna(0)
+        condicao_quantidade_zero = quant_nt_numerico == 0
+    except Exception as e:
+        log_erro(f"Erro ao processar QUANT_NT para limpeza: {str(e)}", mostrar_ui=False)
+        # Se der erro na conversão, usar comparação de string simples
+        condicao_quantidade_zero = df_limpo["QUANT_NT"].isin(["0", "0,00", "0.00", "", "0,0", "0.0"])
+    
+    # Combinar condições: linhas a serem removidas
+    linhas_para_remover = condicao_finalizado & condicao_quantidade_zero
+    
+    # Contar quantas linhas serão removidas
+    linhas_removidas = linhas_para_remover.sum()
+    
+    if linhas_removidas > 0:
+        # Remover as linhas
+        df_limpo = df_limpo[~linhas_para_remover].copy()
+        
+        log_info(f"Limpeza concluída: {linhas_removidas} linhas removidas (ITEM_FINALIZADO=X e QUANT_NT=0)", mostrar_ui=False)
+        log_debug(f"Registros: {registros_iniciais} -> {len(df_limpo)} (removidos: {linhas_removidas})")
+        
+        # Gerar backup do arquivo limpo
+        if linhas_removidas > 0:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(BACKUP_DIR, f"dados_limpos_{timestamp}.csv")
+            df_limpo.to_csv(backup_path, index=False, sep=";", encoding="latin1")
+            log_sucesso(f"Backup dos dados limpos criado em: {backup_path}", mostrar_ui=False)
+    else:
+        log_debug("Nenhuma linha encontrada para remoção (ITEM_FINALIZADO=X e QUANT_NT=0)")
+    
+    return df_limpo
+
 def carregar_dados():
     """
     Carrega dados do arquivo CSV exportado pelo SAP sem transformações.
@@ -31,14 +111,17 @@ def carregar_dados():
         # Ler o arquivo sem conversões automáticas
         df = pd.read_csv(SAP_EXPORT_PATH, sep=";", encoding="latin1", dtype=str)
         
-        # Gerar backup dos dados brutos
+        # Gerar backup dos dados brutos ANTES da limpeza
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = os.path.join(BACKUP_DIR, f"dados_brutos_{timestamp}.csv")
         df.to_csv(backup_path, index=False)
         log_sucesso(f"Backup dos dados brutos criado em: {backup_path}", mostrar_ui=False)
         
+        # NOVA FUNCIONALIDADE: Limpar dados finalizados com quantidade zero
+        df = limpar_dados_finalizados_zerados(df)
+        
         # Log das primeiras linhas para debug
-        log_debug(f"Primeiras linhas do CSV:\n{df.head().to_string()}")
+        log_debug(f"Primeiras linhas do CSV após limpeza:\n{df.head().to_string()}")
         log_debug(f"Colunas encontradas: {df.columns.tolist()}")
         
         # Manter QUANT_NT como está, sem conversão
@@ -60,7 +143,7 @@ def carregar_dados():
         if "ITEM_FINALIZADO" in df.columns:
             df["ITEM_FINALIZADO"] = df["ITEM_FINALIZADO"].fillna("")
         
-        log_info(f"Dados carregados com sucesso. Total de registros: {len(df)}", mostrar_ui=False)
+        log_info(f"Dados carregados com sucesso. Total de registros após limpeza: {len(df)}", mostrar_ui=False)
         return df
     
     except Exception as e:

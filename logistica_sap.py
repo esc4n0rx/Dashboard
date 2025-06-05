@@ -6,21 +6,18 @@ import time
 import pythoncom
 import win32com.client
 import streamlit as st
-from datetime import datetime, timedelta
+from datetime import datetime
 from logistica_logger import log_info, log_erro, log_sucesso, log_debug
 
 def extrair_dados_sap():
     log_info("Iniciando extração de dados do SAP...", mostrar_ui=False)
     
     try:
+        # MUDANÇA: Usar apenas a data atual para ambas as datas
         hoje = datetime.now()
-        ontem = hoje - timedelta(days=1)
+        data_atual = hoje.strftime("%d.%m.%Y")
         
-        data_alta = hoje.strftime("%d.%m.%Y")
-        data_baixa = ontem.strftime("%d.%m.%Y")
-        
-        log_debug(f"Data de início da extração: {data_baixa}")
-        log_debug(f"Data de fim da extração: {data_alta}")
+        log_debug(f"Data para extração (data baixa e alta): {data_atual}")
 
         # Inicializa COM para thread atual
         log_debug("Inicializando COM...")
@@ -51,9 +48,9 @@ def extrair_dados_sap():
         session.findById("wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell").doubleClickCurrentCell
         session.findById("wnd[0]").sendVKey(0)
         
-        # Inserção das datas dinâmicas
-        session.findById("wnd[0]/usr/ctxtSO_PDATU-LOW").text = data_baixa
-        session.findById("wnd[0]/usr/ctxtSO_PDATU-HIGH").text = data_alta
+        # MUDANÇA: Usar a mesma data atual para ambos os campos
+        session.findById("wnd[0]/usr/ctxtSO_PDATU-LOW").text = data_atual
+        session.findById("wnd[0]/usr/ctxtSO_PDATU-HIGH").text = data_atual
         
         session.findById("wnd[0]").sendVKey(0)
         session.findById("wnd[0]/tbar[1]/btn[8]").press()
